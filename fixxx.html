@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Speaking Game</title>
+<style>
+body{
+  font-family:Arial;
+  background:#e8f5e9;
+  text-align:center;
+  margin:0;
+}
+.box{
+  background:#fff;
+  width:600px;
+  margin:60px auto;
+  padding:30px;
+  border-radius:20px;
+  box-shadow:0 0 20px rgba(0,0,0,.3);
+}
+.hidden{display:none}
+h1{color:#2e7d32}
+#timer{font-size:24px;color:red}
+#score{font-size:20px;color:#1b5e20}
+.popup{
+  position:fixed;
+  top:40%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  background:white;
+  padding:20px;
+  border-radius:15px;
+  font-size:24px;
+  box-shadow:0 0 20px black;
+}
+.confetti{
+  position:fixed;
+  width:10px;height:10px;
+  animation:fall 2s linear;
+}
+@keyframes fall{
+  from{top:-10px}
+  to{top:100vh}
+}
+.egg{font-size:90px;cursor:pointer}
+</style>
+</head>
+
+<body>
+
+<div class="box" id="start">
+  <h1>🎤 Speaking Game</h1>
+  <p>
+    Speak the correct answer.<br>
+    Do not click anything.<br>
+    Time limit: 10 seconds
+  </p>
+  <button onclick="startGame()">READY</button>
+</div>
+
+<div class="box hidden" id="game">
+  <div id="score">Score: 0</div>
+  <div id="timer">10</div>
+  <h2 id="question"></h2>
+  <p id="option"></p>
+  <p>🎙️ Speak now</p>
+</div>
+
+<div class="box hidden" id="end">
+  <h1 id="finalScore"></h1>
+  <div id="gift"></div>
+</div>
+
+<audio id="correctSound" src="https://www.soundjay.com/buttons/sounds/button-4.mp3"></audio>
+<audio id="wrongSound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
+
+<script>
+/* ===== SPEECH SETUP ===== */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const mic = new SR();
+mic.lang = "en-US";
+mic.continuous = false;
+mic.interimResults = false;
+
+/* ===== QUESTIONS (EASY WORDS) ===== */
+const questions = [
+ {q:"Zea mays", a:"corn"},
+ {q:"Oryza sativa", a:"rice"},
+ {q:"Mangifera indica", a:"mango"},
+ {q:"Rosa chinensis", a:"rose"},
+ {q:"Felis catus", a:"cat"},
+ {q:"Canis lupus", a:"dog"},
+ {q:"Bos taurus", a:"cow"},
+ {q:"Gallus gallus", a:"hen"},
+ {q:"Panthera leo", a:"lion"},
+ {q:"Elephas maximus", a:"elephant"}
+];
+
+let i = 0;
+let score = 0;
+let time = 10;
+let timer;
+
+/* ===== GAME FLOW ===== */
+function startGame(){
+  document.getElementById("start").classList.add("hidden");
+  document.getElementById("game").classList.remove("hidden");
+  nextQuestion();
+}
+
+function nextQuestion(){
+  if(i >= questions.length){
+    endGame();
+    return;
+  }
+
+  document.getElementById("question").innerText =
+    "Scientific name: " + questions[i].q;
+  document.getElementById("option").innerText =
+    "Say: " + questions[i].a;
+
+  time = 10;
+  document.getElementById("timer").innerText = time;
+
+  mic.abort();
+  setTimeout(()=>mic.start(),300);
+
+  timer = setInterval(()=>{
+    time--;
+    document.getElementById("timer").innerText = time;
+    if(time <= 0){
+      clearInterval(timer);
+      score -= 5;
+      popup("⏰ Time Up!");
+      i++;
+      setTimeout(nextQuestion,1000);
+    }
+  },1000);
+}
+
+/* ===== SPEECH RESULT ===== */
+mic.onresult = e => {
+  clearInterval(timer);
+  let spoken = e.results[0][0].transcript.toLowerCase();
+
+  if(spoken.includes(questions[i].a)){
+    score += 10;
+    document.getElementById("correctSound").play();
+    popup("✅ Correct +10");
+    confetti();
+  } else {
+    score -= 5;
+    document.getElementById("wrongSound").play();
+    popup("❌ Wrong -5");
+  }
+
+  i++;
+  setTimeout(nextQuestion,1200);
+};
+
+mic.onerror = e => {
+  alert("Mic error: " + e.error + "\nUse Chrome + HTTPS");
+};
+
+/* ===== UI ===== */
+function popup(text){
+  let p = document.createElement("div");
+  p.className = "popup";
+  p.innerText = text;
+  document.body.appendChild(p);
+  setTimeout(()=>p.remove(),1000);
+}
+
+function confetti(){
+  for(let x=0;x<20;x++){
+    let c=document.createElement("div");
+    c.className="confetti";
+    c.style.left=Math.random()*innerWidth+"px";
+    c.style.background="hsl("+Math.random()*360+",100%,50%)";
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),2000);
+  }
+}
+
+function endGame(){
+  document.getElementById("game").classList.add("hidden");
+  document.getElementById("end").classList.remove("hidden");
+  document.getElementById("finalScore").innerText =
+    "Your Score: " + score;
+
+  if(score >= 80){
+    document.getElementById("gift").innerHTML =
+      "<h2>🎁 You get a gift!</h2><div class='egg' onclick='crack()'>🥚</div>";
+  }
+}
+
+function crack(){
+  document.getElementById("gift").innerHTML =
+    "<h1>🐣 CLUE</h1><h2>Behind the door</h2>";
+}
+</script>
+
+</body>
+</html>
